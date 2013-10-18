@@ -202,7 +202,7 @@ class IpernityBackup
 
 		@mkdir( $this->rep.'/doc/' );
 
-		array_splice($this->docs, 5); // TEST
+		//array_splice($this->docs, 5); // TEST
 
 		foreach ($this->docs as $k=>$doc) {
 
