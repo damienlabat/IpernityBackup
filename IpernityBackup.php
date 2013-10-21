@@ -1,11 +1,14 @@
 <?php
 
+/* PLEASE ADD HERE YOUR API KEY AND SECRET */
 
 $APIKEY='XXX';
 $APISECRET='XXX';
 
 
-/**/	if ($APIKEY=='XXX') include_once('./dev/apikey.php'); /**/
+/* dev params */	
+	if ($APIKEY=='XXX') include_once('./dev/apikey.php'); 
+/*  */
 
 
 
@@ -86,19 +89,6 @@ class IpernityBackup
 		@mkdir('data');
 
 		$this->getUserData();
-
-		/*
-		$this->getDocumentList();
-		$this->getAlbumList();
-
-		$this->getDocumentsData();
-		$this->getDocumentsMedia();
-		*/	
-		
-
-
-
-		//$this->dump();
 	}
 
 	
@@ -116,8 +106,9 @@ class IpernityBackup
 		$apiJson=json_decode($apiJsonText);
 		ApiService::checkStatus($apiJson);
 		$this->user_id=$apiJson->user->user_id;
+		$this->username=$apiJson->user->username;
 
-		$this->rep='data/'.self::escape($this->username);
+		$this->rep='data/'.self::escape($this->username,true);
 		@mkdir( $this->rep );
 
 		file_put_contents($this->rep.'/user.json', $apiJsonText);		
@@ -135,24 +126,21 @@ class IpernityBackup
 			if ($maxpage>1) echo ' of '.$maxpage;
 			echo PHP_EOL;
 
-			$dest=$this->rep.'/docList'.$page.'.json';
-			if (!file_exists($dest)) {
+			$dest=$this->rep.'/docList.page'.$page.'.json';
 
-				$apiJsonText= $this->ApiService->call(
-					'doc.getList',
-					array(
-						'user_id'=>$this->user_id, 
-						'page'=>$page, 
-						'per_page'=>100
-						)
-				);
+			$apiJsonText= $this->ApiService->call(
+				'doc.getList',
+				array(
+					'user_id'=>$this->user_id, 
+					'page'=>$page, 
+					'per_page'=>100
+					)
+			);
 
-				$apiJson=json_decode($apiJsonText);
-				ApiService::checkStatus($apiJson);
-				
-				file_put_contents($this->rep.'/docList'.$page.'.json', $apiJsonText);
-			} 
-				else $apiJson=json_decode(file_get_contents($dest));
+			$apiJson=json_decode($apiJsonText);
+			ApiService::checkStatus($apiJson);
+			
+			file_put_contents($this->rep.'/docList.page'.$page.'.json', $apiJsonText);
 
 			$maxpage=$apiJson->docs->pages;
 			$this->docs =  array_merge( $this->docs, $apiJson->docs->doc);	
@@ -161,7 +149,7 @@ class IpernityBackup
 		}
 
 		echo ' save full document list'.PHP_EOL;
-		file_put_contents($this->rep.'/docList_full.json', json_encode(array('doc'=>$this->docs)));
+		file_put_contents($this->rep.'/docList.full.json', json_encode(array('doc'=>$this->docs)));
 	}
 
 
@@ -176,13 +164,52 @@ class IpernityBackup
 			if ($maxpage>1) echo ' of '.$maxpage;
 			echo PHP_EOL;
 
-			$dest=$this->rep.'/albumList'.$page.'.json';
-			if (!file_exists($dest)) {
+			$dest=$this->rep.'/albumList.page'.$page.'.json';
+
+			$apiJsonText= $this->ApiService->call(
+				'album.getList', 
+				array(
+					'user_id'=>$this->user_id,
+					'empty'=>1,
+					'page'=>$page, 
+					'per_page'=>100
+					)
+				);
+
+			$apiJson=json_decode($apiJsonText);
+			ApiService::checkStatus($apiJson);			
+			file_put_contents($dest, $apiJsonText);
+
+			$maxpage=$apiJson->albums->pages;
+			$this->albums =  array_merge( $this->albums, $apiJson->albums->album);
+			$page++;
+		}
+
+		echo ' save full album list'.PHP_EOL;
+		file_put_contents($this->rep.'/albumList.full.json', json_encode(array('album'=>$this->albums)));
+	}	
+
+
+	function getAlbumsDocumentList() {
+		echo 'Get albums list'.PHP_EOL;
+
+		foreach ($this->albums as $k=>$album) {
+			echo ' get album "'.$album->title.'" list'.PHP_EOL;
+			$albumPages=array();
+
+			$page=1; $maxpage=1;
+			while ($page<=$maxpage) {
+				echo '      page '.$page;
+				if ($maxpage>1) echo ' of '.$maxpage;
+				echo PHP_EOL;
+
+				$dest=$this->rep.'/albumDocument.ID'.$album->album_id.'.page'.$page.'.json';
+
 				$apiJsonText= $this->ApiService->call(
-					'album.getList', 
+					'album.docs.getList', 
 					array(
-						'user_id'=>$this->user_id,
-						'empty'=>1,
+						'album_id'=>$album->album_id,
+						'extra'=> 'dates,geo,medias,original,link',
 						'page'=>$page, 
 						'per_page'=>100
 						)
@@ -191,18 +218,42 @@ class IpernityBackup
 				$apiJson=json_decode($apiJsonText);
 				ApiService::checkStatus($apiJson);			
 				file_put_contents($dest, $apiJsonText);
+
+				$maxpage=$apiJson->album->docs->pages;
+				$albumPages =  array_merge( $albumPages, $apiJson->album->docs->doc);
+				$page++;
 			}
-			else $apiJson=json_decode(file_get_contents($dest));
 
-			$maxpage=$apiJson->albums->pages;
-			$this->albums[]=$apiJson->albums->album;
-			$page++;
+			echo ' save full album "'.$album->title.'" list'.PHP_EOL;
+			file_put_contents($this->rep.'/albumDocument.ID'.$album->album_id.'.'.self::escape($album->title,true).'.json', json_encode(array('album'=>$albumPages)));
+
 		}
-
-		echo ' save full album list'.PHP_EOL;
-		file_put_contents($this->rep.'/albumList_full.json', json_encode(array('album'=>$this->albums)));
+		
+		
 	}	
 
+
+
+
+	function getTags() {
+		echo 'Get user tags'.PHP_EOL;
+
+			$dest=$this->rep.'/tags.json';
+		
+			$apiJsonText= $this->ApiService->call(
+				'tags.user.getList',
+				array(
+					'user_id'=>$this->user_id,
+					'type'=>'keyword',
+					'count'=>1000
+					)
+			);
+
+			$apiJson=json_decode($apiJsonText);
+			ApiService::checkStatus($apiJson);
+			file_put_contents($dest, $apiJsonText);	
+
+	}
 
 
 
@@ -212,8 +263,6 @@ class IpernityBackup
 		echo 'Get documents data'.PHP_EOL;
 
 		@mkdir( $this->rep.'/doc/' );
-
-		//array_splice($this->docs, 5); // TEST
 
 		foreach ($this->docs as $k=>$doc) {
 			$dest=$this->rep.'/doc/doc'.self::escape($doc->doc_id).'.json';
@@ -258,7 +307,7 @@ class IpernityBackup
 
 			if (isset($doc->medias)) {
 				foreach ($doc->medias->media as $media)
-					self::download($media->url, $this->rep.'/doc/'.self::escape($doc->media).'/'.$doc->doc_id.'.'.$media->label.'.'.$media->format);
+					self::download($media->url, $this->rep.'/doc/'.self::escape($doc->media).'/'.$doc->doc_id.'.'.self::escape($doc->title,true).'.'.$media->label.'.'.$media->format);
 			}
 			else { // pas de media on va se contenter du thumb
 				$maxsize=0;
@@ -270,7 +319,7 @@ class IpernityBackup
 						}
 				}
 
-				self::download($select_thumb->url, $this->rep.'/doc/'.self::escape($doc->media).'/'.$doc->doc_id.'.'.$select_thumb->label.'.'.$select_thumb->ext);
+				self::download($select_thumb->url, $this->rep.'/doc/'.self::escape($doc->media).'/'.$doc->doc_id.'.'.self::escape($doc->title,true).'.'.$select_thumb->label.'.'.$select_thumb->ext);
 			}
 
 		}
@@ -280,13 +329,15 @@ class IpernityBackup
 
 
 
-	static function escape($text) {
-		return preg_replace("/[^\w]+/", "", $text);
+	static function escape($text, $keepspace=false) {
+		$text = iconv('UTF-8','ASCII//TRANSLIT',$text); // remove accents
+		if ($keepspace) return preg_replace("/[^\w]+/", "_", $text);
+			else  return preg_replace("/[^ \w]+/", "_", $text);
 	}
 
 	static function download($ori,$dest) {
 		if (!file_exists($dest)) {
-			echo '     ----> downloading: '.$ori;
+			echo '         ----> downloading: '.$ori;
 			copy($ori, $dest);
 		}
 		echo PHP_EOL;
@@ -327,10 +378,11 @@ class IpernityBackup
 
 	// lets go
 	$IB= new IpernityBackup($username,$APIKEY,$APISECRET);
-	$IB->getDocumentList();
-	//$IB->getAlbumList();
-	//$IB->getAlbumDocumentList();  //TODO
 
+	$IB->getDocumentList();
+	$IB->getAlbumList();
+	$IB->getAlbumsDocumentList(); 
+	$IB->getTags();
 	$IB->getDocumentsData();
 	$IB->getDocumentsMedia();
 
