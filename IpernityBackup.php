@@ -110,6 +110,7 @@ class IpernityBackup
 
 		$this->rep='data/'.self::escape($this->username,true);
 		@mkdir( $this->rep );
+		@mkdir( $this->rep.'/tmp' );
 
 		file_put_contents($this->rep.'/user.json', $apiJsonText);		
 
@@ -126,7 +127,7 @@ class IpernityBackup
 			if ($maxpage>1) echo ' of '.$maxpage;
 			echo PHP_EOL;
 
-			$dest=$this->rep.'/docList.page'.$page.'.json';
+			$dest=$this->rep.'/tmp/docList.page'.$page.'.json';
 
 			$apiJsonText= $this->ApiService->call(
 				'doc.getList',
@@ -140,7 +141,7 @@ class IpernityBackup
 			$apiJson=json_decode($apiJsonText);
 			ApiService::checkStatus($apiJson);
 			
-			file_put_contents($this->rep.'/docList.page'.$page.'.json', $apiJsonText);
+			file_put_contents($dest, $apiJsonText);
 
 			$maxpage=$apiJson->docs->pages;
 			$this->docs =  array_merge( $this->docs, $apiJson->docs->doc);	
@@ -149,7 +150,7 @@ class IpernityBackup
 		}
 
 		echo ' save full document list'.PHP_EOL;
-		file_put_contents($this->rep.'/docList.full.json', json_encode(array('doc'=>$this->docs)));
+		file_put_contents($this->rep.'/docList.json', json_encode(array('doc'=>$this->docs)));
 	}
 
 
@@ -164,7 +165,7 @@ class IpernityBackup
 			if ($maxpage>1) echo ' of '.$maxpage;
 			echo PHP_EOL;
 
-			$dest=$this->rep.'/albumList.page'.$page.'.json';
+			$dest=$this->rep.'/tmp/albumList.page'.$page.'.json';
 
 			$apiJsonText= $this->ApiService->call(
 				'album.getList', 
@@ -186,12 +187,13 @@ class IpernityBackup
 		}
 
 		echo ' save full album list'.PHP_EOL;
-		file_put_contents($this->rep.'/albumList.full.json', json_encode(array('album'=>$this->albums)));
+		file_put_contents($this->rep.'/albumList.json', json_encode(array('album'=>$this->albums)));
 	}	
 
 
 	function getAlbumsDocumentList() {
 		echo 'Get albums list'.PHP_EOL;
+		@mkdir( $this->rep.'/albums/' );
 
 		foreach ($this->albums as $k=>$album) {
 			echo ' get album "'.$album->title.'" list'.PHP_EOL;
@@ -203,7 +205,7 @@ class IpernityBackup
 				if ($maxpage>1) echo ' of '.$maxpage;
 				echo PHP_EOL;
 
-				$dest=$this->rep.'/albumDocument.ID'.$album->album_id.'.page'.$page.'.json';
+				$dest=$this->rep.'/tmp/albumDocument.ID'.$album->album_id.'.page'.$page.'.json';
 
 				$apiJsonText= $this->ApiService->call(
 					'album.docs.getList', 
@@ -225,7 +227,7 @@ class IpernityBackup
 			}
 
 			echo ' save full album "'.$album->title.'" list'.PHP_EOL;
-			file_put_contents($this->rep.'/albumDocument.ID'.$album->album_id.'.'.self::escape($album->title,true).'.json', json_encode(array('album'=>$albumPages)));
+			file_put_contents($this->rep.'/albums/albumDocument.ID'.$album->album_id.'.'.self::escape($album->title,true).'.json', json_encode(array('album'=>$albumPages)));
 
 		}
 		
@@ -265,7 +267,7 @@ class IpernityBackup
 		@mkdir( $this->rep.'/doc/' );
 
 		foreach ($this->docs as $k=>$doc) {
-			$dest=$this->rep.'/doc/doc'.self::escape($doc->doc_id).'.json';
+			$dest=$this->rep.'/doc/doc'.self::escape($doc->doc_id).'.'.self::escape($doc->title,true).'.json';
 
 			echo ' get doc data '.($k+1).' of '.count($this->docs).' - ID.'.$doc->doc_id.' '.$doc->title.PHP_EOL;
 
