@@ -1,25 +1,34 @@
-IpernityBackup
+IpernityBackup PHP-CLI
 ==============
 
-PHP Ipernity backup script, use php-cli
+PHP Ipernity backup script
 
 Backup medias and json documents
 
-## Use
+Requirement php-cli
+
+## Usage
 
 - download IpernityBackup.php `wget https://raw.github.com/damienlabat/IpernityBackup/master/IpernityBackup.php`
 - open it and set APIKEY et APISECRET ( ask a key here http://www.ipernity.com/apps/key )
 - exec `php IpenityBackup.php` or `php IpenityBackup.php user_name`
 - files ar in 'data' folder
 
+
+
 ---
 
-IpernityBackup
+
+
+
+IpernityBackup PHP-CLI
 ==============
 
-Script PHP pour sauvegarder un compte Ipernity, nécessite php-cli
+Script PHP pour sauvegarder un compte Ipernity
 
 Télécharge les documents et les données json (liste documents, albums et tags)
+
+Nécessite php-cli
 
 ## Utilisation
 
